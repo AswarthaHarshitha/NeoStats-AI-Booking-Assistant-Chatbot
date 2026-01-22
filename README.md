@@ -49,7 +49,7 @@ Other libraries:
 
 ---
 
-## 🚀 Quick Start (macOS / zsh)
+## 🚀 Quick Start 
 
 ```bash
 python3 -m venv venv
