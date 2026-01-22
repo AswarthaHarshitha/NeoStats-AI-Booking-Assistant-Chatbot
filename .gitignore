@@ -1,0 +1,11 @@
+venv/
+.env
+__pycache__/
+*.pyc
+bookings.db
+bookings.json
+*.sqlite3
+.idea/
+.vscode/
+.DS_Store
+*.log
