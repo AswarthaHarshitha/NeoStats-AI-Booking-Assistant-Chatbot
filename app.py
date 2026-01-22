@@ -59,7 +59,7 @@
 import streamlit as st
 import os
 from dotenv import load_dotenv
-from openai import OpenAI
+# OpenAI is optional at runtime (may not be installed on Streamlit Cloud or user may not provide a key)
 from booking_logic import extract_booking_state
 from slot_engine import check_availability, book_slot, find_next_available, list_bookings, attempt_resolve, auto_book_alternative
 from bookings_store import reset_bookings, seed_demo_bookings
@@ -77,7 +77,23 @@ import uuid
 logger = get_logger()
 
 load_dotenv()
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# Safe OpenAI client init: don't crash the app if the package or key is missing
+client = None
+try:
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    # try importing the official OpenAI client; if unavailable we'll continue without it
+    try:
+        from openai import OpenAI
+        if OPENAI_API_KEY:
+            client = OpenAI(api_key=OPENAI_API_KEY)
+        else:
+            logger.warning("OPENAI_API_KEY not set; OpenAI client disabled")
+            client = None
+    except Exception as imp_e:
+        logger.warning(f"OpenAI SDK not available: {imp_e}")
+        client = None
+except Exception:
+    client = None
 
 st.set_page_config(page_title="Advanced AI Booking Assistant")
 st.title("🤖 Advanced AI Booking Assistant")
@@ -403,15 +419,25 @@ if user_input:
 
     # CONTINUE CONVERSATION
     else:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                *st.session_state.messages
-            ]
-        )
+        # If OpenAI client isn't available, fall back to a safe local message so the app doesn't crash on deploy
+        if client is None:
+            st.warning("AI backend unavailable. To enable AI responses, install the OpenAI SDK and set the OPENAI_API_KEY environment variable.")
+            reply = "I can't reach the AI service right now. Please provide the missing details and I'll proceed with booking using available info."
+        else:
+            try:
+                response = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        *st.session_state.messages
+                    ]
+                )
+                reply = response.choices[0].message.content
+            except Exception as e:
+                logger.exception("OpenAI request failed")
+                st.warning("AI request failed; falling back to a local response.")
+                reply = "I couldn't get a response from the AI service. Please provide more details or try again later."
 
-        reply = response.choices[0].message.content
         st.session_state.messages.append(
             {"role": "assistant", "content": reply}
         )
