@@ -42,7 +42,7 @@ Additional : PDF receipts, QR codes, Text-to-Speech (TTS)
 - SQLite (primary storage)
 - JSON (fallback storage)
 
-Optional libraries:
+Other libraries:
 - ReportLab (PDF)
 - qrcode / pillow
 - gTTS
